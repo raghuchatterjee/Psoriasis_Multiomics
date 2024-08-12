@@ -1,0 +1,23 @@
+# Generation of read quality reports using FastQC
+./fastqc <sample>.gz
+
+# Adapter and quality trimming using Cutadapt
+cutadapt -a <adapter sequence> --trim-n -m 16 -q 30,30 -o <sample_trimmed>.fastq.gz <sample>.fastq.gz
+
+# Generation of read quality reports post adapter and quality trimming
+./fastqc <sample_trimmed>.gz
+
+# Creating index of reference genome using NovoAlign
+novoindex <genome>.nix <genome>.fa
+
+# Aligning reads to refernce genome using NovoAlign
+novoalign -c 4 -d <genome>.nix -f <sample_trimmed>.fastq.gz -l 16 -m -h90 -rA -o SAM> <sample>.sam 2> <sample>_log.txt
+
+# Map quality filter and conversion of SAM to BAM
+samtools view -S -hbq 1 -F 4 <sample>.sam > <sample>.bam
+
+# Sorting alignments based on chormosomal position
+samtools sort <sample>.bam <sample_sorted>
+
+# Generating read counts of miRNAs
+htseq-count -f bam -s no -t miRNA -i Name -a 1 -r pos --nonunique=all <sample_sorted>.bam hsa_hg19.gff3 > <sample_counts>.txt

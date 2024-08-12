@@ -1,0 +1,20 @@
+# Generation of read quality reports using FastQC
+./fastqc <sample>_R1.gz <sample>_R2.gz
+
+# Adapter and quality trimming using Cutadapt
+cutadapt -a <read1 adapter> -A <read2 adapter> --trim-n -q 30,30 -o <sample_trimmed>_R1.fastq.gz -p <sample_trimmed>_R2.fastq.gz <sample>_R1.fastq.gz <sample>_R2.fastq.gz
+
+# Generation of read quality reports post adapter and quality trimming
+./fastqc <sample_trimmed>_R1.gz <sample_trimmed>_R2.gz
+
+# Creating index of reference genome using STAR
+STAR --runThreadN 10 --runMode genomeGenerate --genomeDir <Directory for STAR index> --genomeFastaFiles <genome>.fa --sjdbGTFfile <genome_annotation>.gtf
+
+# Aligning reads to refernce genome using STAR
+STAR --genomeDir <Directory for STAR index> --readFilesIn <sample_trimmed>_R1.fastq.gz <sample_trimmed>_R2.fastq.gz --runThreadN 10 --quantMode GeneCounts --chimSegmentMin 15 --chimJunctionOverhangMin 15 --readFilesCommand zcat --outSAMtype BAM SortedByCoordinate --outSAMstrandField intronMotif --chimOutType Junctions SeparateSAMold --outFileNamePrefix <sample>
+
+# Transcript assembly using StringTie
+stringtie -p 3 -e -B -G <genome_annotation>.gtf -l <sample> -o <sample>.transcripts.gtf <sample>Aligned.sortedByCoord.out.quality.filtered.reads.bam
+
+# Generating raw counnts
+prepDe.py -i <root directory containing directories of each sample with <sample>.transcripts.gtf files>
